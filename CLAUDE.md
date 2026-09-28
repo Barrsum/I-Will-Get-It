@@ -52,8 +52,8 @@ docs/        design doc, level specs, decisions
 
 ## Commands
 
-Godot binary (currently lives in another project folder; may move to `C:\Godot\`):
-`C:\Users\ADMIN\Desktop\localwebsitedata\pronto-expo\Godot_v4.7.1-stable_win64_console.exe`
+Godot binaries live in `C:\Godot\` (use the `_console` one from the CLI so output is captured):
+`C:\Godot\Godot_v4.7.1-stable_win64_console.exe` — editor GUI: `C:\Godot\Godot_v4.7.1-stable_win64.exe`
 
 - Import / validate project: `<godot> --headless --import` (run from repo root)
 - Smoke-run main scene: `<godot> --headless --quit-after 3`
