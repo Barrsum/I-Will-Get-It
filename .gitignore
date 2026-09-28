@@ -1,0 +1,17 @@
+# Godot 4
+.godot/
+.import/
+export/
+builds/
+*.translation
+export_credentials.cfg
+# Mono / C#
+.mono/
+data_*/
+mono_crash.*.json
+# Blender backups
+*.blend1
+*.blend2
+# OS
+.DS_Store
+Thumbs.db
