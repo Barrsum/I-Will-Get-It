@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scenes/characters/hero/hero.gd" id="1_hero"]
 [ext_resource type="PackedScene" path="res://scenes/characters/hero/hero_skin.tscn" id="2_skin"]
@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://scenes/characters/hero/states/slide_state.gd" id="8_slide"]
 [ext_resource type="Script" path="res://scenes/characters/hero/states/mantle_state.gd" id="9_mantle"]
 [ext_resource type="Script" path="res://scenes/characters/hero/states/emote_state.gd" id="10_emote"]
+[ext_resource type="Script" path="res://scenes/characters/hero/states/rail_state.gd" id="11_rail"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_arm"]
 radius = 0.2
@@ -64,3 +65,6 @@ script = ExtResource("9_mantle")
 
 [node name="Emote" type="Node" parent="StateMachine"]
 script = ExtResource("10_emote")
+
+[node name="Rail" type="Node" parent="StateMachine"]
+script = ExtResource("11_rail")

@@ -22,12 +22,14 @@ func physics_update(delta: float) -> void:
 		return
 
 	var input := hero.get_move_input()
-	var rate := hero.ground_acceleration if input.length() > 0.05 else hero.ground_deceleration
-	hero.accelerate_horizontal(input * hero.ground_speed(), rate, delta)
+	var target := input * hero.ground_speed()
+	hero.accelerate_horizontal(target, hero.ground_rate(target), delta)
 	hero.apply_gravity(delta)
 	hero.move()
 	hero.update_facing(delta, input)
 	hero.skin.update_locomotion(hero.horizontal_speed())
 
 	if not hero.is_on_floor():
+		if hero.velocity.y > 1.0:
+			hero.launched_rise = true  # Ran off a ramp lip: keep the whole arc.
 		finished.emit(Hero.STATE_AIR, {})

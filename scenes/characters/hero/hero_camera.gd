@@ -51,6 +51,8 @@ var _pivot_y := 0.0
 var _snap_next := true
 var _look_ahead := 0.0
 var _follow_y := 0.0
+## Fixed viewpoint (e.g. beside a loop) that watches the hero; null = normal follow camera.
+var _view_point: Variant = null
 
 @onready var _pitch_pivot: Node3D = $Pitch
 @onready var _arm: SpringArm3D = $Pitch/SpringArm3D
@@ -79,6 +81,9 @@ func _process(delta: float) -> void:
 	if side_scroll:
 		_process_side_scroll(delta)
 		return
+	if _view_point != null:
+		_process_view_point(delta)
+		return
 	var stick := Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 	if not stick.is_zero_approx():
 		stick *= stick.length()  # Quadratic response: precise near centre, fast at the edge.
@@ -104,11 +109,37 @@ func _process(delta: float) -> void:
 		length = aim_arm_length
 		offset = aim_shoulder_offset
 		fov *= aim_fov_multiplier
-	elif _hero.current_state() == Hero.STATE_GROUND and _hero.wants_sprint() and _hero.horizontal_speed() > _hero.jog_speed:
-		fov += sprint_fov_bonus
+	else:
+		# Widen with speed: a nudge when sprinting, a big stretch at boost speeds.
+		var over := _hero.horizontal_speed() - _hero.jog_speed
+		if over > 0.5:
+			fov += minf(sprint_fov_bonus + (over - 0.5) * 0.9, 22.0)
 	_arm.spring_length = lerpf(_arm.spring_length, length, blend)
 	_arm.position.x = lerpf(_arm.position.x, offset, blend)
 	camera.fov = lerpf(camera.fov, fov, blend)
+
+
+## Watch the hero from a fixed world point (loops, set pieces). Pass null to return to the
+## normal follow camera; `return_yaw` is where the follow camera should then face.
+func set_view_point(point: Variant, return_yaw := NAN) -> void:
+	_view_point = point
+	if point == null:
+		if not is_nan(return_yaw):
+			yaw = return_yaw
+		pitch = deg_to_rad(-12.0)
+		_arm.spring_length = arm_length
+
+
+func _process_view_point(delta: float) -> void:
+	var blend := 1.0 - exp(-6.0 * delta)
+	var target := _hero.get_global_transform_interpolated().origin + Vector3.UP * 1.0
+	global_position = global_position.lerp(_view_point, blend)
+	var dir := (target - global_position).normalized()
+	global_rotation = Vector3(0.0, atan2(-dir.x, -dir.z), 0.0)
+	_pitch_pivot.rotation.x = asin(clampf(dir.y, -1.0, 1.0))
+	_arm.spring_length = lerpf(_arm.spring_length, 0.0, blend)
+	_arm.position.x = lerpf(_arm.position.x, 0.0, blend)
+	camera.fov = lerpf(camera.fov, Settings.fov, blend)
 
 
 func set_side_scroll(enabled: bool) -> void:

@@ -11,7 +11,8 @@ const LEVELS: Array[Dictionary] = [
 		"boast": "\"I'd stomp a hundred monsters for her!\"", "scene": "res://scenes/levels/level_01/level_01.tscn"},
 	{"id": &"level_02", "number": 2, "title": "INVASION ALLEY", "genre": "On-rails turret shooter",
 		"boast": "\"I'd fight off an alien invasion for her!\"", "scene": "res://scenes/levels/level_02/level_02.tscn"},
-	{"id": &"level_03", "number": 3, "title": "???", "genre": "Coming soon", "boast": "", "scene": ""},
+	{"id": &"level_03", "number": 3, "title": "WHIRLWIND WOODS", "genre": "High-speed 3D platformer",
+		"boast": "\"I'd run through a whole forest in a heartbeat for her!\"", "scene": "res://scenes/levels/level_03/level_03.tscn"},
 ]
 
 const FADE_TIME := 0.25

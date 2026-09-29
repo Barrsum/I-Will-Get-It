@@ -22,6 +22,7 @@ const STATE_CROUCH := &"Crouch"
 const STATE_SLIDE := &"Slide"
 const STATE_MANTLE := &"Mantle"
 const STATE_EMOTE := &"Emote"
+const STATE_RAIL := &"Rail"
 
 ## States in which holding aim zooms the camera and turns the hero to face the crosshair.
 const AIMABLE_STATES: Array[StringName] = [STATE_GROUND, STATE_AIR, STATE_CROUCH]
@@ -41,6 +42,9 @@ const AIMABLE_STATES: Array[StringName] = [STATE_GROUND, STATE_AIR, STATE_CROUCH
 @export var aim_speed_multiplier := 0.65
 @export var ground_acceleration := 60.0
 @export var ground_deceleration := 45.0
+## How fast speed above the current target bleeds off while still holding a direction
+## (low = momentum from boosts/slopes carries, speed-level style).
+@export var overspeed_decay := 45.0
 
 @export_group("Jump")
 @export var jump_height := 1.35
@@ -98,6 +102,11 @@ var _sprint_latched := false
 var _capsule: CapsuleShape3D
 var _spawn_transform: Transform3D
 var _plane_z := 0.0
+var _boost_time := 0.0
+var _boost_dir := Vector3.ZERO
+var _boost_speed := 0.0
+## Rising from a spring/ramp: full jump gravity even without jump held (no short-hop cut).
+var launched_rise := false
 
 @onready var camera: HeroCamera = $CameraRig
 @onready var visual_root: Node3D = $VisualRoot
@@ -126,6 +135,9 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	# Parent processes before children, so states always see this tick's buffered input.
 	jump_buffer = maxf(jump_buffer - delta, 0.0)
+	_boost_time = maxf(_boost_time - delta, 0.0)
+	if velocity.y <= 0.0:
+		launched_rise = false
 	coyote = coyote_time if is_on_floor() else maxf(coyote - delta, 0.0)
 	if controls_enabled and (Input.is_action_just_pressed(&"jump") \
 			or (side_scroll and Input.is_action_just_pressed(&"side_jump"))):
@@ -157,6 +169,8 @@ func get_move_input() -> Vector3:
 		raw.y = 0.0
 	if raw.is_zero_approx():
 		_sprint_latched = false
+		if _boost_time > 0.0:
+			return _boost_dir  # Boost pads keep you running hands-free.
 	if side_scroll:
 		return Vector3(raw.x, 0.0, 0.0)
 	return Vector3(raw.x, 0.0, raw.y).rotated(Vector3.UP, camera.yaw)
@@ -198,6 +212,8 @@ func wants_sprint() -> bool:
 
 func ground_speed() -> float:
 	var speed := sprint_speed if wants_sprint() else jog_speed
+	if _boost_time > 0.0:
+		speed = maxf(speed, _boost_speed)
 	return speed * (aim_speed_multiplier if is_aiming else 1.0)
 
 
@@ -223,9 +239,47 @@ func apply_gravity(delta: float) -> void:
 	var gravity := fall_gravity
 	if velocity.y > 0.0:
 		gravity = jump_gravity
-		if not is_jump_held():
+		if not is_jump_held() and not launched_rise:
 			gravity *= jump_release_gravity_multiplier
 	velocity.y = maxf(velocity.y - gravity * delta, -max_fall_speed)
+
+
+## Speed burst in `direction` (boost pads). The hero auto-runs for `duration` if no input.
+func apply_boost(direction: Vector3, speed: float, duration: float) -> void:
+	_boost_dir = Vector3(direction.x, 0.0, direction.z).normalized()
+	_boost_speed = speed
+	_boost_time = duration
+	set_horizontal_velocity(_boost_dir * maxf(speed, horizontal_speed()))
+
+
+func is_boosting() -> bool:
+	return _boost_time > 0.0
+
+
+## Throws the hero into the air (springs). Full-height flight regardless of the jump button.
+func launch(new_velocity: Vector3) -> void:
+	velocity = new_velocity
+	jump_buffer = 0.0
+	coyote = 0.0
+	launched_rise = true
+	skin.play_jump()
+	state_machine.transition_to(STATE_AIR)
+
+
+## Follow a Path3D (loops, grind rails) at `speed`; hands back to Air at the end.
+## `camera_point`: optional world position for the camera to watch from during the ride.
+func ride_path(path: Path3D, speed: float, camera_point: Variant = null) -> void:
+	state_machine.transition_to(STATE_RAIL, {"path": path, "speed": speed, "camera_point": camera_point})
+
+
+## Horizontal acceleration rate toward `target`: accelerate, brake, or let momentum bleed off.
+func ground_rate(target: Vector3) -> float:
+	if target.length() < 0.05:
+		return ground_deceleration
+	var current := horizontal_speed()
+	if current > target.length() + 0.5 and horizontal_velocity().dot(target) > 0.0:
+		return overspeed_decay
+	return ground_acceleration
 
 
 func can_jump() -> bool:

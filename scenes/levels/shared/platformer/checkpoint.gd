@@ -4,6 +4,9 @@ extends Area3D
 
 var level: Node  ## Any level with reach_checkpoint(checkpoint).
 var active := false
+## Trigger width across the path (wide for 3D tracks) and where the flag stands within it.
+var trigger_width := 1.2
+var flag_offset_x := 0.0
 
 var _flag: MeshInstance3D
 
@@ -13,18 +16,21 @@ func _ready() -> void:
 	collision_mask = Hero.LAYER_HERO
 	var shape := CollisionShape3D.new()
 	shape.shape = BoxShape3D.new()
-	(shape.shape as BoxShape3D).size = Vector3(1.2, 4.0, 3.0)
+	(shape.shape as BoxShape3D).size = Vector3(trigger_width, 4.0, 3.0)
 	shape.position.y = 2.0
 	add_child(shape)
+	var visual := Node3D.new()
+	visual.position.x = flag_offset_x
+	add_child(visual)
 	var pole := PlatformerArt.cylinder(0.06, 3.2, PlatformerArt.flat(Color(0.95, 0.95, 0.95), 0.4))
 	pole.position.y = 1.6
-	add_child(pole)
+	visual.add_child(pole)
 	var base := PlatformerArt.cylinder(0.3, 0.2, PlatformerArt.flat(Color(0.4, 0.4, 0.46), 0.6))
 	base.position.y = 0.1
-	add_child(base)
+	visual.add_child(base)
 	_flag = PlatformerArt.box(Vector3(1.0, 0.65, 0.05), PlatformerArt.flat(Color(0.55, 0.55, 0.6), 0.6))
 	_flag.position = Vector3(0.5, 1.2, 0)
-	add_child(_flag)
+	visual.add_child(_flag)
 	body_entered.connect(func(body: Node3D) -> void:
 		if body is Hero:
 			level.reach_checkpoint(self))
