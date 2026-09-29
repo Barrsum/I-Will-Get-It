@@ -121,12 +121,26 @@ toggle_debug={
 ]
 }
 
+side_jump={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"device":-1,"physical_keycode":87), Object(InputEventKey,"device":-1,"physical_keycode":4194320)]
+}
+side_crouch={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"device":-1,"physical_keycode":83), Object(InputEventKey,"device":-1,"physical_keycode":4194322)]
+}
+fire={
+"deadzone": 0.5,
+"events": [Object(InputEventMouseButton,"device":-1,"button_index":1), Object(InputEventJoypadMotion,"device":-1,"axis":5,"axis_value":1.0)]
+}
+
 [layer_names]
 
 3d_physics/layer_1="world"
 3d_physics/layer_2="hero"
 3d_physics/layer_3="enemy"
 3d_physics/layer_4="pickup"
+3d_physics/layer_5="target"
 
 [physics]
 

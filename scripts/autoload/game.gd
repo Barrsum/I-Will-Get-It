@@ -9,7 +9,8 @@ const GYM := "res://scenes/levels/test_gym/test_gym.tscn"
 const LEVELS: Array[Dictionary] = [
 	{"id": &"level_01", "number": 1, "title": "STOMP ROAD", "genre": "Classic side-scrolling platformer",
 		"boast": "\"I'd stomp a hundred monsters for her!\"", "scene": "res://scenes/levels/level_01/level_01.tscn"},
-	{"id": &"level_02", "number": 2, "title": "???", "genre": "Coming soon", "boast": "", "scene": ""},
+	{"id": &"level_02", "number": 2, "title": "RAILGUN ALLEY", "genre": "On-rails target shooter",
+		"boast": "\"I'd blast through a whole city for her!\"", "scene": "res://scenes/levels/level_02/level_02.tscn"},
 	{"id": &"level_03", "number": 3, "title": "???", "genre": "Coming soon", "boast": "", "scene": ""},
 ]
 
@@ -42,6 +43,14 @@ func level_by_id(id: StringName) -> Dictionary:
 		if level.id == id:
 			return level
 	return {}
+
+
+## The playable level after the current one, or {} if there isn't one yet.
+func next_level() -> Dictionary:
+	var index := LEVELS.find(current_level)
+	if index < 0 or index + 1 >= LEVELS.size() or LEVELS[index + 1].scene == "":
+		return {}
+	return LEVELS[index + 1]
 
 
 func start_level(id: StringName) -> void:

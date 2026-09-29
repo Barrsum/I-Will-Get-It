@@ -23,7 +23,7 @@ var _hurtbox: Area3D
 func _ready() -> void:
 	add_to_group(&"grumble")
 	collision_layer = Hero.LAYER_ENEMY
-	collision_mask = Hero.LAYER_WORLD
+	collision_mask = Hero.LAYER_WORLD | Hero.LAYER_ENEMY  # Grumbles collide with each other.
 	var shape := CollisionShape3D.new()
 	shape.shape = BoxShape3D.new()
 	(shape.shape as BoxShape3D).size = Vector3(1.1, 1.0, 1.0) * SIZE
@@ -48,13 +48,25 @@ func _physics_process(delta: float) -> void:
 	if not _active:
 		_active = absf(global_position.x - level.hero.global_position.x) < ACTIVATION_DISTANCE
 		return
+	if is_on_floor() and not _ground_ahead():
+		direction = -direction  # Never walk off a ledge; patrol back instead.
 	velocity.x = direction * SPEED
 	velocity.y = maxf(velocity.y - GRAVITY * delta, -25.0)
 	velocity.z = 0.0
 	move_and_slide()
 	global_position.z = 0.0
-	if is_on_wall():
-		direction = -direction
+	for i in get_slide_collision_count():
+		var collision := get_slide_collision(i)
+		if absf(collision.get_normal().x) < 0.7:
+			continue  # Floor or ceiling, not a wall.
+		var other := collision.get_collider() as Grumble
+		if other:
+			# Bump into each other and both bounce apart.
+			direction = signf(global_position.x - other.global_position.x)
+			other.direction = -direction
+			other._active = true
+		else:
+			direction = signf(collision.get_normal().x)
 	if global_position.y < -10.0:
 		queue_free()
 		return
@@ -89,6 +101,14 @@ func knock_out() -> void:
 	tween.tween_property(self, "global_position:y", global_position.y + 2.5, 0.3).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	tween.tween_property(self, "global_position:y", global_position.y - 14.0, 0.8).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	tween.finished.connect(queue_free)
+
+
+## Is there floor just past our leading edge?
+func _ground_ahead() -> bool:
+	var half_width := 0.55 * SIZE
+	var from := global_position + Vector3(direction * (half_width + 0.15), 0.3, 0)
+	var query := PhysicsRayQueryParameters3D.create(from, from + Vector3.DOWN * 1.0, Hero.LAYER_WORLD, [get_rid()])
+	return not get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
 
 func is_dead() -> bool:

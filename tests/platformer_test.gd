@@ -109,6 +109,27 @@ func _run() -> void:
 		side_target.queue_free()
 	await _frames(150)  # Let invulnerability run out.
 
+	# W jumps in side-scroll levels.
+	await _place(Vector3(10.5 * CELL, GROUND_Y, 0))
+	Input.action_press(&"side_jump")
+	await _frames(12)
+	Input.action_release(&"side_jump")
+	_check("W key jumps in side-scroll mode", hero.global_position.y > GROUND_Y + 1.0, "y=%.2f" % hero.global_position.y)
+	await _frames(60)
+
+	# Grumble AI: turns back at a pit edge (ground starts at cell 94 after the pit).
+	var edge_walker := _spawn_grumble(96.0 * CELL, -1.0)
+	var bumper_a := _spawn_grumble(107.0 * CELL, 1.0)
+	var bumper_b := _spawn_grumble(111.0 * CELL, -1.0)
+	await _frames(150)
+	_check("Grumble turns around at a pit edge instead of falling", edge_walker.global_position.y > GROUND_Y - 0.1
+		and edge_walker.direction > 0.0, "pos=%s dir=%.0f" % [edge_walker.global_position, edge_walker.direction])
+	_check("two Grumbles bump and bounce apart (never pass through)", bumper_a.global_position.x < bumper_b.global_position.x
+		and bumper_a.direction < 0.0 and bumper_b.direction > 0.0,
+		"a=%.1f b=%.1f" % [bumper_a.global_position.x, bumper_b.global_position.x])
+	for g in [edge_walker, bumper_a, bumper_b]:
+		g.queue_free()
+
 	await _place(Vector3(80.5 * CELL, GROUND_Y, 0))
 	await _frames(5)
 	_check("checkpoint is recorded", Game.checkpoint_index == 0, "index=%d" % Game.checkpoint_index)
@@ -138,6 +159,16 @@ func _run() -> void:
 	get_tree().quit(failures)
 
 
+func _spawn_grumble(x: float, direction: float) -> Grumble:
+	var g := Grumble.new()
+	g.level = level
+	g.direction = direction
+	g.position = Vector3(x, GROUND_Y + 0.05, 0)
+	level.add_child(g)
+	g._active = true
+	return g
+
+
 func _block_at(cell_x: int, cell_y: int) -> BumpBlock:
 	var where := Vector3((cell_x + 0.5) * CELL, (cell_y + 0.5) * CELL, 0)
 	for child in level.get_children():
@@ -162,7 +193,7 @@ func _jump_and_land() -> void:
 
 
 func _release() -> void:
-	for action in [&"move_left", &"move_right", &"move_forward", &"jump", &"sprint", &"crouch"]:
+	for action in [&"move_left", &"move_right", &"move_forward", &"jump", &"side_jump", &"sprint", &"crouch"]:
 		Input.action_release(action)
 
 

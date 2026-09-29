@@ -54,7 +54,7 @@ func _run() -> void:
 	await _frames(14)
 	await _shot("20_super_jump")
 
-	level.hud.show_results(23, 187.0, 2)
+	level.hud.show_level_results(23, 187.0, 2)
 	await _frames(30)
 	await _shot("21_results")
 	level.queue_free()

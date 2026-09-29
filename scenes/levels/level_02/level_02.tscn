@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/levels/level_02/level_02.gd" id="1_level"]
+
+[node name="Level02" type="Node3D"]
+script = ExtResource("1_level")
+level_title = "RAILGUN ALLEY"
+boast = "\"I'd blast through a whole city for her!\""

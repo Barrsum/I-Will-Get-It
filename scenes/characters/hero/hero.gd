@@ -31,6 +31,8 @@ const AIMABLE_STATES: Array[StringName] = [STATE_GROUND, STATE_AIR, STATE_CROUCH
 @export var side_scroll := false
 @export var can_mantle := true
 @export var can_aim := true
+## Always aiming (on-rails shooter): camera stays zoomed and the hero faces the crosshair.
+@export var force_aim := false
 
 @export_group("Ground")
 @export var jog_speed := 5.5
@@ -125,11 +127,13 @@ func _physics_process(delta: float) -> void:
 	# Parent processes before children, so states always see this tick's buffered input.
 	jump_buffer = maxf(jump_buffer - delta, 0.0)
 	coyote = coyote_time if is_on_floor() else maxf(coyote - delta, 0.0)
-	if controls_enabled and Input.is_action_just_pressed(&"jump"):
+	if controls_enabled and (Input.is_action_just_pressed(&"jump") \
+			or (side_scroll and Input.is_action_just_pressed(&"side_jump"))):
 		jump_buffer = jump_buffer_time
-	crouch_requested = controls_enabled and Input.is_action_just_pressed(&"crouch")
-	is_aiming = can_aim and not side_scroll and controls_enabled \
-		and Input.is_action_pressed(&"aim") and current_state() in AIMABLE_STATES
+	crouch_requested = controls_enabled and (Input.is_action_just_pressed(&"crouch") \
+		or (side_scroll and Input.is_action_just_pressed(&"side_crouch")))
+	is_aiming = force_aim or (can_aim and not side_scroll and controls_enabled \
+		and Input.is_action_pressed(&"aim") and current_state() in AIMABLE_STATES)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -158,14 +162,16 @@ func get_move_input() -> Vector3:
 	return Vector3(raw.x, 0.0, raw.y).rotated(Vector3.UP, camera.yaw)
 
 
-## Is the jump button held? (False while controls are disabled.)
+## Is the jump button held? In side-scroll levels W / Up also count. (False while controls are disabled.)
 func is_jump_held() -> bool:
-	return controls_enabled and Input.is_action_pressed(&"jump")
+	return controls_enabled and (Input.is_action_pressed(&"jump") \
+		or (side_scroll and Input.is_action_pressed(&"side_jump")))
 
 
-## Is the crouch button held? (False while controls are disabled.)
+## Is the crouch button held? In side-scroll levels S / Down also count. (False while controls are disabled.)
 func is_crouch_held() -> bool:
-	return controls_enabled and Input.is_action_pressed(&"crouch")
+	return controls_enabled and (Input.is_action_pressed(&"crouch") \
+		or (side_scroll and Input.is_action_pressed(&"side_crouch")))
 
 
 ## move_and_slide() plus contact callbacks: anything we bump into that has

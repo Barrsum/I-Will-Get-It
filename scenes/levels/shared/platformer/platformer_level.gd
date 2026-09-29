@@ -155,7 +155,7 @@ func reach_goal(flagpole: Flagpole) -> void:
 	await tween.finished
 	hero.visual_root.rotation.y = 0.0  # Turn to face the camera.
 	hero.skin.play_emote()
-	hud.show_results(coins, Game.elapsed, Game.deaths)
+	hud.show_level_results(coins, Game.elapsed, Game.deaths)
 
 
 ## Bumping a block from below knocks out any enemy standing on it.

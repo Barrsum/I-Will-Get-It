@@ -39,6 +39,9 @@ extends Node3D
 var yaw := 0.0
 var pitch := deg_to_rad(-12.0)
 var side_scroll := false
+## Optional look limit (on-rails levels): yaw stays within yaw_center ± yaw_limit radians.
+var yaw_center := 0.0
+var yaw_limit := INF
 
 var _hero: Hero
 var _emote_view := false
@@ -163,6 +166,11 @@ func set_emote_view(enabled: bool) -> void:
 	_yaw_tween.tween_method(func(value: float) -> void: yaw = wrapf(value, -PI, PI), from, to, 0.6 if enabled else 0.35)
 
 
+## Weapon kick: nudges the view upward.
+func add_recoil(radians: float) -> void:
+	pitch = clampf(pitch + radians, deg_to_rad(pitch_min_degrees), deg_to_rad(pitch_max_degrees))
+
+
 ## Direction the crosshair points, for aiming and interaction.
 func aim_direction() -> Vector3:
 	return -camera.global_basis.z
@@ -172,5 +180,7 @@ func _rotate_view(yaw_delta: float, pitch_delta: float) -> void:
 	if side_scroll:
 		return
 	yaw = wrapf(yaw - yaw_delta, -PI, PI)
+	if yaw_limit < PI:
+		yaw = yaw_center + clampf(angle_difference(yaw_center, yaw), -yaw_limit, yaw_limit)
 	var invert := -1.0 if Settings.invert_look_y else 1.0
 	pitch = clampf(pitch - pitch_delta * invert, deg_to_rad(pitch_min_degrees), deg_to_rad(pitch_max_degrees))

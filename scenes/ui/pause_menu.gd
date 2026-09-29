@@ -8,10 +8,11 @@ const MENU_X := 110.0
 const CONTROLS: Array[Array] = [
 	["Move", "W A S D", "Left stick"],
 	["Look", "Mouse", "Right stick"],
-	["Jump", "Space", "A"],
+	["Jump", "Space  (W in 2D levels)", "A"],
 	["Sprint", "Hold Shift", "Click L-stick"],
-	["Crouch / Slide", "Ctrl or C", "B / Click R-stick"],
+	["Crouch / Slide", "Ctrl or C  (S in 2D)", "B / Click R-stick"],
 	["Aim", "Right mouse", "Left trigger"],
+	["Shoot", "Left mouse", "Right trigger"],
 	["Mantle", "Jump into a ledge", "Jump into a ledge"],
 	["Emote", "B", "D-pad down"],
 	["Menu", "Esc", "Start"],
