@@ -8,3 +8,4 @@
 *.blend binary
 *.ttf binary
 *.otf binary
+*.bat text eol=crlf
