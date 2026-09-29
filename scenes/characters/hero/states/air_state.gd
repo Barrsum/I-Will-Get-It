@@ -31,7 +31,7 @@ func physics_update(delta: float) -> void:
 
 	var fall_speed := -hero.velocity.y
 	hero.apply_gravity(delta)
-	hero.move_and_slide()
+	hero.move()
 	hero.update_facing(delta, input)
 	hero.skin.update_air(hero.velocity.y)
 

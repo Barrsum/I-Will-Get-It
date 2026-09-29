@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/levels/level_01/level_01.gd" id="1_level"]
+
+[node name="Level01" type="Node3D"]
+script = ExtResource("1_level")
+level_title = "STOMP ROAD"
+boast = "\"I'd stomp a hundred monsters for her!\""

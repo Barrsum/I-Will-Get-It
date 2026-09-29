@@ -7,8 +7,8 @@ func enter(_previous_state: StringName, _data: Dictionary = {}) -> void:
 
 
 func physics_update(delta: float) -> void:
-	var wants_stand := hero.crouch_requested if Settings.toggle_crouch else not Input.is_action_pressed(&"crouch")
-	wants_stand = wants_stand or Input.is_action_just_pressed(&"sprint")
+	var wants_stand := hero.crouch_requested if Settings.toggle_crouch else not hero.is_crouch_held()
+	wants_stand = wants_stand or (hero.controls_enabled and Input.is_action_just_pressed(&"sprint"))
 
 	if hero.jump_buffer > 0.0 and hero.can_jump() and hero.set_crouched(false):
 		hero.jump()
@@ -23,7 +23,7 @@ func physics_update(delta: float) -> void:
 	var speed := hero.crouch_speed * (hero.aim_speed_multiplier if hero.is_aiming else 1.0)
 	hero.accelerate_horizontal(input * speed, rate, delta)
 	hero.apply_gravity(delta)
-	hero.move_and_slide()
+	hero.move()
 	hero.update_facing(delta, input)
 	hero.skin.update_crouch(hero.horizontal_speed())
 

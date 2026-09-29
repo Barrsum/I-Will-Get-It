@@ -19,7 +19,7 @@ func handle_input(event: InputEvent) -> void:
 
 func physics_update(delta: float) -> void:
 	hero.apply_gravity(delta)
-	hero.move_and_slide()
+	hero.move()
 	var interrupted := hero.get_move_input().length() > 0.2 or hero.jump_buffer > 0.0 or hero.crouch_requested
 	if interrupted or not hero.is_on_floor():
 		finished.emit(Hero.STATE_GROUND, {})

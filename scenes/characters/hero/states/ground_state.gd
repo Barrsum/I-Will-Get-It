@@ -25,7 +25,7 @@ func physics_update(delta: float) -> void:
 	var rate := hero.ground_acceleration if input.length() > 0.05 else hero.ground_deceleration
 	hero.accelerate_horizontal(input * hero.ground_speed(), rate, delta)
 	hero.apply_gravity(delta)
-	hero.move_and_slide()
+	hero.move()
 	hero.update_facing(delta, input)
 	hero.skin.update_locomotion(hero.horizontal_speed())
 

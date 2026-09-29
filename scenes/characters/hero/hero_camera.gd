@@ -2,6 +2,7 @@ class_name HeroCamera
 extends Node3D
 ## Over-the-right-shoulder follow camera (Fortnite style): hero sits left of centre,
 ## crosshair in the middle. Blends between normal, aim, sprint and emote framings.
+## Also has a side-scroll mode for 2.5D levels (fixed side view, look-ahead, soft vertical follow).
 ## top_level + interpolated follow keeps it smooth at any refresh rate.
 
 @export_group("Framing")
@@ -25,8 +26,19 @@ extends Node3D
 ## Radians per second at full stick deflection and controller sensitivity 1.0.
 @export var stick_radians_per_second := 3.4
 
+@export_group("Side scroll")
+@export var side_distance := 14.0
+## Camera pivot height above the hero's feet.
+@export var side_height := 2.6
+@export var side_pitch_degrees := -5.0
+@export var side_fov := 45.0
+@export var side_look_ahead := 2.5
+## The camera never scrolls left of this X (level start).
+@export var side_limit_left := -INF
+
 var yaw := 0.0
 var pitch := deg_to_rad(-12.0)
+var side_scroll := false
 
 var _hero: Hero
 var _emote_view := false
@@ -34,6 +46,8 @@ var _pre_emote_yaw := 0.0
 var _yaw_tween: Tween
 var _pivot_y := 0.0
 var _snap_next := true
+var _look_ahead := 0.0
+var _follow_y := 0.0
 
 @onready var _pitch_pivot: Node3D = $Pitch
 @onready var _arm: SpringArm3D = $Pitch/SpringArm3D
@@ -59,6 +73,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	if side_scroll:
+		_process_side_scroll(delta)
+		return
 	var stick := Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 	if not stick.is_zero_approx():
 		stick *= stick.length()  # Quadratic response: precise near centre, fast at the edge.
@@ -91,6 +108,38 @@ func _process(delta: float) -> void:
 	camera.fov = lerpf(camera.fov, fov, blend)
 
 
+func set_side_scroll(enabled: bool) -> void:
+	side_scroll = enabled
+	_arm.collision_mask = 0 if enabled else 1
+	yaw = 0.0
+	pitch = deg_to_rad(side_pitch_degrees) if enabled else deg_to_rad(-12.0)
+	snap()
+
+
+func _process_side_scroll(delta: float) -> void:
+	var target := _hero.get_global_transform_interpolated().origin
+	var snapping := _snap_next
+	_snap_next = false
+
+	# Look ahead in the direction of travel; hold the last offset while standing still.
+	if absf(_hero.velocity.x) > 0.5:
+		var wanted := signf(_hero.velocity.x) * side_look_ahead
+		_look_ahead = wanted if snapping else lerpf(_look_ahead, wanted, 1.0 - exp(-1.8 * delta))
+	# Vertical: lazy while jumping so the view doesn't bob, faster on the ground, fast when falling away.
+	var wanted_y := target.y + side_height
+	var rate := 3.0 if _hero.is_on_floor() else 1.0
+	if wanted_y < _follow_y - 3.0 or wanted_y > _follow_y + 3.5:
+		rate = 8.0
+	_follow_y = wanted_y if snapping else lerpf(_follow_y, wanted_y, 1.0 - exp(-rate * delta))
+
+	global_position = Vector3(maxf(target.x + _look_ahead, side_limit_left), _follow_y, target.z)
+	global_rotation = Vector3.ZERO
+	_pitch_pivot.rotation.x = deg_to_rad(side_pitch_degrees)
+	_arm.spring_length = side_distance
+	_arm.position.x = 0.0
+	camera.fov = side_fov
+
+
 func capture_mouse() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -120,6 +169,8 @@ func aim_direction() -> Vector3:
 
 
 func _rotate_view(yaw_delta: float, pitch_delta: float) -> void:
+	if side_scroll:
+		return
 	yaw = wrapf(yaw - yaw_delta, -PI, PI)
 	var invert := -1.0 if Settings.invert_look_y else 1.0
 	pitch = clampf(pitch - pitch_delta * invert, deg_to_rad(pitch_min_degrees), deg_to_rad(pitch_max_degrees))

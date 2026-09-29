@@ -20,7 +20,7 @@ func physics_update(delta: float) -> void:
 		hero.jump()  # Slide-jump keeps all horizontal momentum.
 		finished.emit(Hero.STATE_AIR, {})
 		return
-	var cancel := hero.crouch_requested if Settings.toggle_crouch else not Input.is_action_pressed(&"crouch")
+	var cancel := hero.crouch_requested if Settings.toggle_crouch else not hero.is_crouch_held()
 	if cancel and hero.set_crouched(false):
 		finished.emit(Hero.STATE_GROUND, {})
 		return
@@ -38,13 +38,13 @@ func physics_update(delta: float) -> void:
 	hero.set_horizontal_velocity(horizontal.limit_length(hero.slide_max_speed))
 
 	hero.apply_gravity(delta)
-	hero.move_and_slide()
+	hero.move()
 	hero.update_facing(delta, hero.horizontal_velocity())
 
 	if not hero.is_on_floor():
 		finished.emit(Hero.STATE_AIR, {})
 	elif hero.horizontal_speed() < hero.slide_exit_speed:
-		var keep_crouch := Settings.toggle_crouch or Input.is_action_pressed(&"crouch")
+		var keep_crouch := Settings.toggle_crouch or hero.is_crouch_held()
 		if keep_crouch or not hero.set_crouched(false):
 			finished.emit(Hero.STATE_CROUCH, {})
 		else:

@@ -10,6 +10,12 @@ signal jumped
 signal landed(impact_speed: float)
 signal respawned
 
+## Physics layer bits (named in project.godot).
+const LAYER_WORLD := 1
+const LAYER_HERO := 2
+const LAYER_ENEMY := 4
+const LAYER_PICKUP := 8
+
 const STATE_GROUND := &"Ground"
 const STATE_AIR := &"Air"
 const STATE_CROUCH := &"Crouch"
@@ -19,6 +25,12 @@ const STATE_EMOTE := &"Emote"
 
 ## States in which holding aim zooms the camera and turns the hero to face the crosshair.
 const AIMABLE_STATES: Array[StringName] = [STATE_GROUND, STATE_AIR, STATE_CROUCH]
+
+@export_group("Level rules")
+## 2.5D mode: movement locked to the XY plane at the spawn Z, fixed side camera.
+@export var side_scroll := false
+@export var can_mantle := true
+@export var can_aim := true
 
 @export_group("Ground")
 @export var jog_speed := 5.5
@@ -69,6 +81,10 @@ var fall_gravity: float
 
 var is_crouched := false
 var is_aiming := false
+## Uniform body size (1 = normal). Scales collision and visuals; used by power-ups.
+var size_scale := 1.0
+## When false, all player input reads as neutral (cutscenes, death, level end).
+var controls_enabled := true
 ## Seconds left in which a jump press still counts (pressed slightly before landing).
 var jump_buffer := 0.0
 ## Seconds left in which a jump is still allowed after walking off a ledge.
@@ -79,6 +95,7 @@ var crouch_requested := false
 var _sprint_latched := false
 var _capsule: CapsuleShape3D
 var _spawn_transform: Transform3D
+var _plane_z := 0.0
 
 @onready var camera: HeroCamera = $CameraRig
 @onready var visual_root: Node3D = $VisualRoot
@@ -89,7 +106,7 @@ var _spawn_transform: Transform3D
 
 func _ready() -> void:
 	add_to_group(&"hero")
-	_recalculate_jump()
+	recalculate_jump()
 	_capsule = CapsuleShape3D.new()
 	_capsule.radius = capsule_radius
 	collision_shape.shape = _capsule
@@ -97,17 +114,22 @@ func _ready() -> void:
 
 	# The body never rotates; facing lives on VisualRoot and look direction on the camera.
 	_spawn_transform = global_transform
+	_plane_z = global_position.z
 	_face_spawn_direction()
+	if side_scroll:
+		camera.set_side_scroll(true)
+		visual_root.rotation.y = PI * 0.5  # Face right, into the level.
 
 
 func _physics_process(delta: float) -> void:
 	# Parent processes before children, so states always see this tick's buffered input.
 	jump_buffer = maxf(jump_buffer - delta, 0.0)
 	coyote = coyote_time if is_on_floor() else maxf(coyote - delta, 0.0)
-	if Input.is_action_just_pressed(&"jump"):
+	if controls_enabled and Input.is_action_just_pressed(&"jump"):
 		jump_buffer = jump_buffer_time
-	crouch_requested = Input.is_action_just_pressed(&"crouch")
-	is_aiming = Input.is_action_pressed(&"aim") and current_state() in AIMABLE_STATES
+	crouch_requested = controls_enabled and Input.is_action_just_pressed(&"crouch")
+	is_aiming = can_aim and not side_scroll and controls_enabled \
+		and Input.is_action_pressed(&"aim") and current_state() in AIMABLE_STATES
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -124,14 +146,46 @@ func current_state() -> StringName:
 
 ## Camera-relative movement input on the XZ plane. Length is 0..1 (analog sticks keep magnitude).
 func get_move_input() -> Vector3:
+	if not controls_enabled:
+		return Vector3.ZERO
 	var raw := Input.get_vector(&"move_left", &"move_right", &"move_forward", &"move_back")
+	if side_scroll:
+		raw.y = 0.0
 	if raw.is_zero_approx():
 		_sprint_latched = false
+	if side_scroll:
+		return Vector3(raw.x, 0.0, 0.0)
 	return Vector3(raw.x, 0.0, raw.y).rotated(Vector3.UP, camera.yaw)
 
 
+## Is the jump button held? (False while controls are disabled.)
+func is_jump_held() -> bool:
+	return controls_enabled and Input.is_action_pressed(&"jump")
+
+
+## Is the crouch button held? (False while controls are disabled.)
+func is_crouch_held() -> bool:
+	return controls_enabled and Input.is_action_pressed(&"crouch")
+
+
+## move_and_slide() plus contact callbacks: anything we bump into that has
+## `on_hero_contact(hero, normal, impact_velocity)` is told about it (blocks hit from below, etc.).
+## States must call this instead of move_and_slide().
+func move() -> void:
+	var impact_velocity := velocity
+	move_and_slide()
+	if side_scroll:
+		global_position.z = _plane_z
+		velocity.z = 0.0
+	for i in get_slide_collision_count():
+		var collision := get_slide_collision(i)
+		var collider := collision.get_collider()
+		if collider and collider.has_method(&"on_hero_contact"):
+			collider.on_hero_contact(self, collision.get_normal(), impact_velocity)
+
+
 func wants_sprint() -> bool:
-	if is_aiming or is_crouched:
+	if is_aiming or is_crouched or not controls_enabled:
 		return false
 	return Settings.sprint_by_default or _sprint_latched or Input.is_action_pressed(&"sprint")
 
@@ -163,7 +217,7 @@ func apply_gravity(delta: float) -> void:
 	var gravity := fall_gravity
 	if velocity.y > 0.0:
 		gravity = jump_gravity
-		if not Input.is_action_pressed(&"jump"):
+		if not is_jump_held():
 			gravity *= jump_release_gravity_multiplier
 	velocity.y = maxf(velocity.y - gravity * delta, -max_fall_speed)
 
@@ -217,15 +271,30 @@ func can_stand() -> bool:
 	return _capsule_fits(global_position, standing_height)
 
 
+## Grows or shrinks the hero (collision + visuals). Returns false if there's no room to grow.
+func set_size_scale(value: float) -> bool:
+	var previous := size_scale
+	size_scale = value
+	if value > previous and not _capsule_fits(global_position, crouch_height if is_crouched else standing_height):
+		size_scale = previous
+		return false
+	_set_capsule_height(crouch_height if is_crouched else standing_height)
+	visual_root.scale = Vector3.ONE * size_scale
+	return true
+
+
 func _set_capsule_height(height: float) -> void:
-	_capsule.height = height
-	collision_shape.position.y = height * 0.5
+	_capsule.radius = capsule_radius * size_scale
+	_capsule.height = height * size_scale
+	collision_shape.position.y = height * size_scale * 0.5
 
 
+## Would a capsule of unscaled `height` (scaled by size_scale) fit standing at `feet`?
 func _capsule_fits(feet: Vector3, height: float) -> bool:
+	height *= size_scale
 	var shape := CapsuleShape3D.new()
-	shape.radius = capsule_radius - 0.02
-	shape.height = height - 0.04
+	shape.radius = capsule_radius * size_scale - 0.02
+	shape.height = maxf(height - 0.04, shape.radius * 2.0)
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = shape
 	query.transform = Transform3D(Basis.IDENTITY, feet + Vector3.UP * (height * 0.5 + 0.03))
@@ -239,6 +308,8 @@ func _capsule_fits(feet: Vector3, height: float) -> bool:
 ## Looks for a ledge in `direction` that the hero can pull up onto.
 ## Returns {} when there is none, else {target: Vector3 (feet position on top), wall_normal, height}.
 func find_mantle_ledge(direction: Vector3) -> Dictionary:
+	if not can_mantle:
+		return {}
 	direction.y = 0.0
 	if direction.length_squared() < 0.01:
 		return {}
@@ -291,9 +362,30 @@ func respawn() -> void:
 	is_crouched = false
 	_set_capsule_height(standing_height)
 	_face_spawn_direction()
+	if side_scroll:
+		visual_root.rotation.y = PI * 0.5
 	reset_physics_interpolation()
 	state_machine.transition_to(STATE_GROUND)
 	respawned.emit()
+
+
+## Moves the spawn point (checkpoints) and optionally teleports there now.
+func set_spawn(where: Vector3, teleport := true) -> void:
+	_spawn_transform.origin = where
+	if side_scroll:
+		_plane_z = where.z
+	if teleport:
+		global_position = where
+		velocity = Vector3.ZERO
+		reset_physics_interpolation()
+		camera.snap()
+
+
+## Stops all movement logic (death, level complete). Animations keep playing.
+func set_frozen(frozen: bool) -> void:
+	state_machine.process_mode = Node.PROCESS_MODE_DISABLED if frozen else Node.PROCESS_MODE_INHERIT
+	controls_enabled = not frozen
+	velocity = Vector3.ZERO
 
 
 func _face_spawn_direction() -> void:
@@ -304,7 +396,8 @@ func _face_spawn_direction() -> void:
 	visual_root.rotation.y = spawn_yaw + PI
 
 
-func _recalculate_jump() -> void:
+## Call after changing jump_height / jump_time_to_peak / jump_time_to_descent at runtime.
+func recalculate_jump() -> void:
 	jump_velocity = 2.0 * jump_height / jump_time_to_peak
 	jump_gravity = 2.0 * jump_height / (jump_time_to_peak * jump_time_to_peak)
 	fall_gravity = 2.0 * jump_height / (jump_time_to_descent * jump_time_to_descent)

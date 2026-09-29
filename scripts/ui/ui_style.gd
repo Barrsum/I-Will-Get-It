@@ -31,6 +31,44 @@ static func heading_font() -> FontVariation:
 	return _heading
 
 
+static func label(text: String, font: Font, font_size: int, color := TEXT) -> Label:
+	var node := Label.new()
+	node.text = text
+	node.add_theme_font_override(&"font", font)
+	node.add_theme_font_size_override(&"font_size", font_size)
+	node.add_theme_color_override(&"font_color", color)
+	return node
+
+
+## Big slanted menu button (or a smaller one when font_size is given), added to `parent`.
+static func menu_button(parent: Control, text: String, action: Callable, font_size := 0) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.custom_minimum_size.y = 64 if font_size == 0 else 52
+	if font_size > 0:
+		button.add_theme_font_size_override(&"font_size", font_size)
+	button.pressed.connect(action)
+	parent.add_child(button)
+	return button
+
+
+## Navy wash fading out from the left edge, so a menu column always reads over busy 3D.
+static func add_left_wash(parent: Control, reach := 0.7) -> void:
+	var wash := TextureRect.new()
+	var gradient := GradientTexture2D.new()
+	gradient.gradient = Gradient.new()
+	gradient.gradient.set_color(0, Color(NAVY, 0.92))
+	gradient.gradient.set_color(1, Color(NAVY, 0.0))
+	gradient.fill_to = Vector2(1, 0)
+	wash.texture = gradient
+	wash.stretch_mode = TextureRect.STRETCH_SCALE
+	wash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	wash.anchor_right = reach
+	wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(wash)
+
+
 static func get_theme() -> Theme:
 	if _theme:
 		return _theme

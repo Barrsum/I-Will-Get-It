@@ -1,15 +1,15 @@
 [remap]
 
-importer="scene"
+importer="animation_library"
 importer_version=1
-type="PackedScene"
-uid="uid://dgbmx7bu3ksdl"
-path="res://.godot/imported/ual1_mannequin.glb-e5450bd421c7ff9e18b96bc8d3eea2c5.scn"
+type="AnimationLibrary"
+uid="uid://c6pixg71wwmi7"
+path="res://.godot/imported/ual2_animations.glb-aa1710675ebbb5556e3b7782b8394029.res"
 
 [deps]
 
-source_file="res://assets/models/characters/mannequin/ual1_mannequin.glb"
-dest_files=["res://.godot/imported/ual1_mannequin.glb-e5450bd421c7ff9e18b96bc8d3eea2c5.scn"]
+source_file="res://assets/models/characters/animations/ual2_animations.glb"
+dest_files=["res://.godot/imported/ual2_animations.glb-aa1710675ebbb5556e3b7782b8394029.res"]
 
 [params]
 
@@ -41,8 +41,8 @@ materials/extract_format=0
 materials/extract_path=""
 _subresources={
 "nodes": {
-"PATH:Rig/Skeleton3D": {
-"retarget/bone_map": Resource("res://assets/models/characters/mannequin/ual1_bone_map.tres")
+"PATH:Armature/Skeleton3D": {
+"retarget/bone_map": Resource("res://assets/models/characters/animations/ual2_bone_map.tres")
 }
 }
 }
