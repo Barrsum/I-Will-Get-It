@@ -1,0 +1,65 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://scenes/characters/hero/hero.gd" id="1_hero"]
+[ext_resource type="PackedScene" path="res://scenes/characters/hero/hero_skin.tscn" id="2_skin"]
+[ext_resource type="Script" path="res://scenes/characters/hero/hero_camera.gd" id="3_camera"]
+[ext_resource type="Script" path="res://scripts/state_machine/state_machine.gd" id="4_fsm"]
+[ext_resource type="Script" path="res://scenes/characters/hero/states/ground_state.gd" id="5_ground"]
+[ext_resource type="Script" path="res://scenes/characters/hero/states/air_state.gd" id="6_air"]
+[ext_resource type="Script" path="res://scenes/characters/hero/states/crouch_state.gd" id="7_crouch"]
+[ext_resource type="Script" path="res://scenes/characters/hero/states/slide_state.gd" id="8_slide"]
+[ext_resource type="Script" path="res://scenes/characters/hero/states/mantle_state.gd" id="9_mantle"]
+[ext_resource type="Script" path="res://scenes/characters/hero/states/emote_state.gd" id="10_emote"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_arm"]
+radius = 0.2
+
+[node name="Hero" type="CharacterBody3D"]
+floor_constant_speed = true
+floor_max_angle = 0.802851
+floor_snap_length = 0.35
+script = ExtResource("1_hero")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+
+[node name="VisualRoot" type="Node3D" parent="."]
+
+[node name="Skin" parent="VisualRoot" instance=ExtResource("2_skin")]
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("3_camera")
+
+[node name="Pitch" type="Node3D" parent="CameraRig"]
+
+[node name="SpringArm3D" type="SpringArm3D" parent="CameraRig/Pitch"]
+shape = SubResource("SphereShape3D_arm")
+spring_length = 3.2
+margin = 0.05
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig/Pitch/SpringArm3D"]
+current = true
+fov = 80.0
+near = 0.05
+far = 1500.0
+
+[node name="StateMachine" type="Node" parent="." node_paths=PackedStringArray("initial_state")]
+script = ExtResource("4_fsm")
+initial_state = NodePath("Ground")
+
+[node name="Ground" type="Node" parent="StateMachine"]
+script = ExtResource("5_ground")
+
+[node name="Air" type="Node" parent="StateMachine"]
+script = ExtResource("6_air")
+
+[node name="Crouch" type="Node" parent="StateMachine"]
+script = ExtResource("7_crouch")
+
+[node name="Slide" type="Node" parent="StateMachine"]
+script = ExtResource("8_slide")
+
+[node name="Mantle" type="Node" parent="StateMachine"]
+script = ExtResource("9_mantle")
+
+[node name="Emote" type="Node" parent="StateMachine"]
+script = ExtResource("10_emote")
