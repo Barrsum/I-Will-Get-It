@@ -46,7 +46,7 @@ func setup(level: RailShooterLevel) -> void:
 	_progress_fill.color = UIStyle.ACCENT
 	_progress_fill.size = Vector2(0, 10)
 	track.add_child(_progress_fill)
-	var hint := UIStyle.label("SHOOT THE TARGETS  ·  DON'T SHOOT THE HEARTS", UIStyle.BODY_BOLD_FONT, 22, Color(UIStyle.TEXT, 0.7))
+	var hint := UIStyle.label("SHOOT THE GLOWING ALIENS  ·  BIG ONES TAKE 3 HITS", UIStyle.BODY_BOLD_FONT, 22, Color(UIStyle.TEXT, 0.7))
 	hint.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 36)
 	hint.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -77,10 +77,9 @@ func show_shooter_results() -> void:
 	rank.add_theme_font_override(&"font", UIStyle.heading_font())
 	rank.add_theme_font_size_override(&"font_size", 60)
 	rank.add_theme_color_override(&"font_color", UIStyle.TEXT)
-	show_results("STREET CLEARED!", [
+	show_results("ALLEY CLEARED!", [
 		["SCORE", format_number(_level.score)],
-		["TARGETS HIT", "%d / %d" % [_level.hits, _level.hostile_total]],
+		["ALIENS DOWN", "%d / %d" % [_level.kills, _level.hostile_total]],
 		["ACCURACY", "%d%%" % roundi(_level.accuracy() * 100.0)],
 		["BEST MULTIPLIER", "x%d" % _level.best_multiplier],
-		["HEARTS SHOT", "%d" % _level.friendly_hits],
 	], rank)

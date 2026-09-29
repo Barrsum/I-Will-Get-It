@@ -4,5 +4,5 @@
 
 [node name="Level02" type="Node3D"]
 script = ExtResource("1_level")
-level_title = "RAILGUN ALLEY"
-boast = "\"I'd blast through a whole city for her!\""
+level_title = "INVASION ALLEY"
+boast = "\"I'd fight off an alien invasion for her!\""

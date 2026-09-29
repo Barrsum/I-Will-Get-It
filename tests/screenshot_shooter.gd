@@ -13,6 +13,7 @@ func _ready() -> void:
 	if not args.is_empty():
 		_out_dir = args[0]
 	DirAccess.make_dir_recursive_absolute(_out_dir)
+	Settings.placeholder_voices = false
 	_run.call_deferred()
 
 
@@ -20,42 +21,40 @@ func _run() -> void:
 	Game.current_level = Game.level_by_id(&"level_02")
 	level = (load(LEVEL) as PackedScene).instantiate() as RailShooterLevel
 	add_child(level)
-	await _frames(60)
-	await _shot("30_intro")
-	await _frames(150)
-	await _shot("31_street")
+	await _frames(40)
+	await _shot("30_portal_drop")
+	while not level.driving:
+		await _frames(1)
+	await _shot("31_commander")
+	await _frames(240)
+	await _shot("32_alley")
 
-	# Aim at the next hostile target that pops up and fire (beam mid-flight).
 	var target := await _next_up_target()
 	if target:
 		await _aim_at(target.center())
-		await _shot("32_aiming")
-		level._shoot(level._aim_ray())
-		await _frames(2)
-		await _shot("33_hit")
+		await _shot("33_aiming")
+		level.shoot()
+		await _frames(3)
+		await _shot("34_kill")
 
-	level.hero.global_position.z = -110.0
-	level.hero.reset_physics_interpolation()
-	level.hero.camera.yaw = deg_to_rad(35.0)
-	level.hero.camera.pitch = deg_to_rad(12.0)
-	await _frames(90)
-	await _shot("34_windows")
-
-	level.hero.global_position.z = -level.track_length + 0.5
-	level.hero.reset_physics_interpolation()
-	while not level._finished:
-		await _frames(1)
-	await get_tree().create_timer(1.8).timeout  # Results appear after a short delay + fade.
-	await _shot("35_results")
+	level.vehicle.global_position.z -= 120.0
+	level.hero.camera.yaw = deg_to_rad(40.0)
+	level.hero.camera.pitch = deg_to_rad(18.0)
+	await _frames(120)
+	await _shot("35_rooftops")
+	level.hero.camera.yaw = 0.0
+	level.hero.camera.pitch = deg_to_rad(8.0)
+	await _frames(60)
+	await _shot("36_mothership")
 	get_tree().quit()
 
 
-func _next_up_target() -> TargetPlate:
-	for i in 900:
+func _next_up_target() -> ShooterTarget:
+	for i in 1500:
 		await get_tree().process_frame
 		for child in level.get_children():
-			if child is TargetPlate and child.phase == TargetPlate.Phase.UP and child.is_hostile():
-				await _frames(15)
+			if child is ShooterTarget and child.phase == ShooterTarget.Phase.UP:
+				await _frames(20)
 				return child
 	return null
 

@@ -19,6 +19,7 @@ const SCHEMA: Array[Dictionary] = [
 	{"key": &"show_fps", "label": "Show FPS"},
 	{"section": "AUDIO"},
 	{"key": &"master_volume", "label": "Master volume", "min": 0.0, "max": 1.0, "step": 0.01, "format": "%d%%", "display_scale": 100.0},
+	{"key": &"placeholder_voices", "label": "Placeholder voices (text-to-speech)"},
 ]
 
 var _widgets: Dictionary = {}

@@ -3,7 +3,7 @@ extends Area3D
 ## Spinning collectible coin. `popup` coins (from "?" blocks) are collected instantly and just
 ## play a hop animation.
 
-var level: PlatformerLevel
+var level: Node  ## Any level with add_coin().
 var popup := false
 
 var _visual: Node3D

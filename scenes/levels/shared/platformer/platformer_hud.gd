@@ -2,12 +2,13 @@ class_name PlatformerHUD
 extends LevelHUD
 ## Platformer overlay: coin counter, level title and timer. Intro, toasts and results come from LevelHUD.
 
-var _level: PlatformerLevel
+var _level: Node
 var _coins_label: Label
 var _time_label: Label
 
 
-func setup(level: PlatformerLevel) -> void:
+## `level` must expose `level_title` and `coins` (platformer and speed levels both do).
+func setup(level: Node) -> void:
 	_level = level
 	setup_root()
 
@@ -44,8 +45,10 @@ func set_coins(count: int) -> void:
 	tween.tween_property(_coins_label, "scale", Vector2.ONE, 0.12)
 
 
-func show_level_results(coins: int, seconds: float, deaths: int) -> void:
-	show_results("LEVEL COMPLETE!", [["COINS", "%d" % coins], ["TIME", format_time(seconds)], ["FALLS", "%d" % deaths]])
+func show_level_results(coins: int, seconds: float, deaths: int, next_label := "NEXT LEVEL",
+		next_action := Callable()) -> Control:
+	return show_results("LEVEL COMPLETE!", [["COINS", "%d" % coins], ["TIME", format_time(seconds)], ["FALLS", "%d" % deaths]],
+		null, next_label, next_action)
 
 
 class CoinIcon extends Control:

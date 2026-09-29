@@ -8,6 +8,8 @@ uniform float cell_size = 1.5;
 uniform float edge_width : hint_range(0.0, 0.3) = 0.06;
 uniform bool brick_pattern = false;
 uniform float roughness_value : hint_range(0.0, 1.0) = 0.85;
+// >0 makes the edge lines glow.
+uniform float edge_emission = 0.0;
 
 varying vec3 world_pos;
 varying vec3 world_normal;
@@ -36,6 +38,7 @@ void fragment() {
 		edges = max(edges, edge_mask(b, edge_width * 2.2) * 0.9);
 	}
 	ALBEDO = mix(base_color.rgb, edge_color.rgb, edges);
+	EMISSION = edge_color.rgb * edges * edge_emission;
 	ROUGHNESS = roughness_value;
 	SPECULAR = 0.35;
 }

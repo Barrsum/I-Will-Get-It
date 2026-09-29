@@ -1,32 +1,37 @@
 class_name Railgun
 extends Node3D
-## The hero's rail blaster: a compact sci-fi pistol that follows the right hand and points at
-## the crosshair target, plus its beam / muzzle / impact effects. Placeholder primitives until
+## Rail blaster: sits on a mount node (a hand, or a vehicle turret pivot) and points at the
+## crosshair target; also owns the beam / muzzle / impact effects. Placeholder primitives until
 ## a Blender model replaces _build_model().
 
 const BEAM_COLOR := Color(0.35, 0.95, 1.0)
 const MUZZLE_OFFSET := Vector3(0, 0.03, -0.42)
 
-## Node the gun sits on (HeroSkin.right_hand()).
-var hand: Node3D
+## Node the gun sits on (HeroSkin.right_hand() or a turret pivot).
+var mount: Node3D
+## Model size multiplier (2+ for a vehicle-mounted turret).
+var scale_factor := 1.0
 
 
 func _ready() -> void:
 	top_level = true
 	_build_model()
+	for child in get_children():
+		(child as Node3D).position *= scale_factor
+		(child as Node3D).scale *= scale_factor
 
 
 ## Snap to the hand and point at `target` (call every frame).
 func aim_at(target: Vector3) -> void:
-	if hand == null:
+	if mount == null:
 		return
-	global_position = hand.global_position
+	global_position = mount.global_position
 	if global_position.distance_squared_to(target) > 0.01:
 		look_at(target, Vector3.UP)
 
 
 func muzzle_position() -> Vector3:
-	return global_transform * MUZZLE_OFFSET
+	return global_transform * (MUZZLE_OFFSET * scale_factor)
 
 
 func fire_effects(target: Vector3, hit_something: bool) -> void:
@@ -35,14 +40,14 @@ func fire_effects(target: Vector3, hit_something: bool) -> void:
 	var beam_material := PlatformerArt.flat(BEAM_COLOR, 0.2, 0.0, 4.0)
 	var length := from.distance_to(target)
 	if length > 0.05:
-		var beam := PlatformerArt.cylinder(0.035, length, beam_material, 8)
+		var beam := PlatformerArt.cylinder(0.035 * sqrt(scale_factor), length, beam_material, 8)
 		parent.add_child(beam)
 		beam.look_at_from_position((from + target) * 0.5, target, Vector3.UP)
 		beam.rotate_object_local(Vector3.RIGHT, -PI * 0.5)  # Cylinder axis (Y) onto the beam.
 		var tween := beam.create_tween()
 		tween.tween_property(beam, "scale", Vector3(0.0, 1.0, 0.0), 0.16).set_ease(Tween.EASE_IN)
 		tween.tween_callback(beam.queue_free)
-	_flash(from, 0.16, 0.08)
+	_flash(from, 0.16 * sqrt(scale_factor), 0.08)
 	if hit_something:
 		_flash(target, 0.35, 0.18)
 

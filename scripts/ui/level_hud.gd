@@ -92,13 +92,20 @@ func show_intro(title: String, boast: String) -> void:
 
 ## Results card. `rows` = [[name, value], ...]; `headline` e.g. "LEVEL COMPLETE!".
 ## `extra` is an optional Control shown under the headline (e.g. a rank badge).
-func show_results(headline: String, rows: Array, extra: Control = null) -> void:
+## `next_action` overrides the NEXT LEVEL button (e.g. to play a transition cutscene first).
+## Returns the card's holder; free it to dismiss the card.
+func show_results(headline: String, rows: Array, extra: Control = null,
+		next_label := "NEXT LEVEL", next_action := Callable()) -> Control:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	var holder := Control.new()
+	holder.set_anchors_preset(Control.PRESET_FULL_RECT)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(holder)
 	var dim := ColorRect.new()
 	dim.color = Color(UIStyle.NAVY, 0.0)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(dim)
+	holder.add_child(dim)
 	dim.create_tween().tween_property(dim, "color:a", 0.55, 0.3)
 	var panel := PanelContainer.new()
 	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
@@ -123,11 +130,13 @@ func show_results(headline: String, rows: Array, extra: Control = null) -> void:
 	buttons.add_theme_constant_override(&"separation", 16)
 	column.add_child(buttons)
 	var next := Game.next_level()
-	if not next.is_empty():
-		_result_button(buttons, "NEXT LEVEL", Game.start_level.bind(next.id))
+	if next_action.is_valid():
+		_result_button(buttons, next_label, next_action)
+	elif not next.is_empty():
+		_result_button(buttons, next_label, Game.start_level.bind(next.id))
 	_result_button(buttons, "PLAY AGAIN", Game.restart_level)
 	_result_button(buttons, "MAIN MENU", Game.goto_main_menu)
-	root.add_child(panel)
+	holder.add_child(panel)
 	panel.pivot_offset = panel.size * 0.5
 	panel.scale = Vector2.ONE * 0.8
 	panel.modulate.a = 0.0
@@ -135,6 +144,7 @@ func show_results(headline: String, rows: Array, extra: Control = null) -> void:
 	tween.tween_property(panel, "modulate:a", 1.0, 0.25)
 	tween.tween_property(panel, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	(buttons.get_child(0) as Button).grab_focus()
+	return holder
 
 
 static func format_time(seconds: float) -> String:

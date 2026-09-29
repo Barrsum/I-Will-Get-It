@@ -41,6 +41,7 @@ var _current: StringName
 var _hold_time := 0.0
 ## One-shot clip to continue into when the current one finishes (e.g. slide start -> slide loop).
 var _queued: StringName = &""
+var _start_clip: StringName = IDLE
 ## Gun mode: an AnimationTree layering an aim pose on the upper body over walking legs.
 var _gun_tree: AnimationTree
 var _right_hand: BoneAttachment3D
@@ -51,7 +52,7 @@ func _ready() -> void:
 	assert(_player, "HeroSkin needs an AnimationPlayer inside the model")
 	if not _player.has_animation_library(&"ual2"):
 		_player.add_animation_library(&"ual2", UAL2_LIBRARY)
-	_play(IDLE, 0.0)
+	_play(_start_clip, 0.0)
 
 
 func _process(delta: float) -> void:
@@ -158,11 +159,36 @@ func play_gun_shot() -> void:
 ## Node that follows the right hand bone (weapon mount point).
 func right_hand() -> Node3D:
 	if _right_hand == null:
-		var skeleton := find_child("GeneralSkeleton", true, false) as Skeleton3D
-		_right_hand = BoneAttachment3D.new()
-		skeleton.add_child(_right_hand)
-		_right_hand.bone_name = "RightHand"
+		_right_hand = attach_to_bone(&"RightHand")
 	return _right_hand
+
+
+## New node that follows a humanoid bone (Head, RightHand, ...), for props like helmets.
+func attach_to_bone(bone: StringName) -> BoneAttachment3D:
+	var skeleton := find_child("GeneralSkeleton", true, false) as Skeleton3D
+	var attachment := BoneAttachment3D.new()
+	skeleton.add_child(attachment)
+	attachment.bone_name = bone
+	return attachment
+
+
+## Plays any clip by name (cutscenes, NPC poses). Library clips use "ual2/Name".
+## Safe to call before the skin enters the tree (applied on _ready).
+func play_clip(anim: StringName, blend := blend_time) -> void:
+	if _player == null:
+		_start_clip = anim
+		return
+	_queued = &""
+	_play(anim, blend)
+
+
+## Recolours the whole body (NPCs reuse the mannequin with a different look).
+func set_tint(color: Color) -> void:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.55
+	for node in find_children("*", "MeshInstance3D", true, false):
+		(node as MeshInstance3D).material_override = material
 
 
 func _build_gun_tree() -> AnimationTree:

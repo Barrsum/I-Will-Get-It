@@ -36,6 +36,9 @@ var _dying := false
 var _complete := false
 var _invulnerable := 0.0
 var _pending_grow := false
+var environment: Environment
+var sky_material: ProceduralSkyMaterial
+var sun: DirectionalLight3D
 
 
 ## Override: the level layout. All rows should be the same length.
@@ -44,6 +47,7 @@ func get_map() -> PackedStringArray:
 
 
 func _ready() -> void:
+	PlatformerArt.clear_cache()
 	_build_environment()
 	_build_from_map(get_map())
 	_build_backdrop()
@@ -155,6 +159,11 @@ func reach_goal(flagpole: Flagpole) -> void:
 	await tween.finished
 	hero.visual_root.rotation.y = 0.0  # Turn to face the camera.
 	hero.skin.play_emote()
+	_after_goal()
+
+
+## Called once the hero has slid down the flagpole. Override for story transitions.
+func _after_goal() -> void:
 	hud.show_level_results(coins, Game.elapsed, Game.deaths)
 
 
@@ -367,7 +376,7 @@ func _spawn_hero() -> void:
 
 
 func _build_environment() -> void:
-	var sky_material := ProceduralSkyMaterial.new()
+	sky_material = ProceduralSkyMaterial.new()
 	sky_material.sky_top_color = Color(0.22, 0.52, 0.98)
 	sky_material.sky_horizon_color = Color(0.72, 0.87, 1.0)
 	sky_material.ground_horizon_color = Color(0.72, 0.87, 1.0)
@@ -376,6 +385,7 @@ func _build_environment() -> void:
 	var sky := Sky.new()
 	sky.sky_material = sky_material
 	var env := Environment.new()
+	environment = env
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
@@ -396,7 +406,7 @@ func _build_environment() -> void:
 	world_env.environment = env
 	add_child(world_env)
 
-	var sun := DirectionalLight3D.new()
+	sun = DirectionalLight3D.new()
 	sun.light_color = Color(1.0, 0.95, 0.86)
 	sun.light_energy = 1.35
 	sun.shadow_enabled = true

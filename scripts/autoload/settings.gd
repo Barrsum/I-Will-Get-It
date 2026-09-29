@@ -17,6 +17,8 @@ var fullscreen: bool = false
 var vsync: bool = true
 var show_fps: bool = false
 var master_volume: float = 0.8
+## Read story dialogue with the OS text-to-speech voice until real voice acting exists.
+var placeholder_voices: bool = true
 
 ## Defaults captured before load(), used by reset_to_defaults().
 var _defaults: Dictionary = {}
@@ -33,7 +35,7 @@ func keys() -> Array[StringName]:
 	return [
 		&"mouse_sensitivity", &"controller_sensitivity", &"invert_look_y", &"fov",
 		&"sprint_by_default", &"toggle_crouch", &"fullscreen", &"vsync", &"show_fps",
-		&"master_volume",
+		&"master_volume", &"placeholder_voices",
 	]
 
 

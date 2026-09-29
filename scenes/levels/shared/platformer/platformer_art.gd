@@ -11,6 +11,20 @@ const TILE_SHADER: Shader = preload("res://assets/shaders/platformer_tile.gdshad
 static var _cache: Dictionary = {}
 
 
+## Fresh materials for a new level (levels may animate shared materials, e.g. world morphs).
+static func clear_cache() -> void:
+	_cache.clear()
+
+
+## Every cached plain material (for whole-world colour changes).
+static func cached_flat_materials() -> Array[StandardMaterial3D]:
+	var out: Array[StandardMaterial3D] = []
+	for material in _cache.values():
+		if material is StandardMaterial3D:
+			out.append(material)
+	return out
+
+
 static func tile_material(kind: StringName) -> ShaderMaterial:
 	var key := StringName("tile_" + kind)
 	if _cache.has(key):
@@ -18,6 +32,7 @@ static func tile_material(kind: StringName) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
 	m.shader = TILE_SHADER
 	m.set_shader_parameter(&"cell_size", CELL)
+	m.set_shader_parameter(&"edge_emission", 0.0)  # Set explicitly so it can be tweened.
 	match kind:
 		&"dirt":
 			_tile(m, Color(0.72, 0.46, 0.26), Color(0.55, 0.33, 0.18), 0.03)

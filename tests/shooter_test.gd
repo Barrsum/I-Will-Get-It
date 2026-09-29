@@ -1,6 +1,7 @@
 extends Node
-## Headless gameplay test for Level 2 (rail shooter): auto-walk, target pop-up, hit scoring,
-## multiplier growth, miss reset, friendly penalty and level finish.
+## Headless gameplay test for Level 2 (tank turret shooter): portal intro lands the hero on the
+## tank, the tank drives, aliens drop in and become shootable, kills score and raise the
+## multiplier, stray shots reset it, brutes take 3 hits, reaching the end finishes the level.
 ## Run: <godot_console> --headless res://tests/shooter_test.tscn   (exit code = failed checks)
 
 const LEVEL := "res://scenes/levels/level_02/level_02.tscn"
@@ -10,6 +11,7 @@ var failures := 0
 
 
 func _ready() -> void:
+	Settings.placeholder_voices = false
 	_run.call_deferred()
 
 
@@ -17,62 +19,76 @@ func _run() -> void:
 	level = (load(LEVEL) as PackedScene).instantiate() as RailShooterLevel
 	add_child(level)
 	await _frames(20)
-	var hero := level.hero
-	_check("level has targets", level.hostile_total > 10, "hostile=%d" % level.hostile_total)
+	_check("level has aliens", level.hostile_total > 10, "hostile=%d" % level.hostile_total)
 
-	var z0 := hero.global_position.z
-	await _frames(60)
-	_check("hero walks forward on rails", hero.global_position.z < z0 - 2.0 and absf(hero.global_position.x) < 0.01,
-		"dz=%.2f" % (hero.global_position.z - z0))
+	for i in 1500:  # Intro: portal drop + Commander lines.
+		if level.driving:
+			break
+		await get_tree().physics_frame
+	_check("intro lands the hero on the tank and starts driving", level.driving and level.hero_on_mount)
 
-	var first := await _wait_for_up_target(true)
-	_check("targets pop up as the hero approaches", first != null)
-	if first:
-		await _aim_at(first.center())
-		level._shoot(level._aim_ray())
-		_check("shooting a target scores and raises the multiplier",
-			level.hits == 1 and level.score == 100 and level.multiplier == 2,
-			"hits=%d score=%d mult=%d" % [level.hits, level.score, level.multiplier])
+	var z0 := level.vehicle.global_position.z
+	await _frames(90)
+	_check("tank drives forward", level.vehicle.global_position.z < z0 - 2.0, "dz=%.2f" % (level.vehicle.global_position.z - z0))
+	_check("hero rides the turret", level.hero.global_position.distance_to(level.mount_position()) < 0.05)
+
+	var grunt := await _wait_for_landed(AlienTarget.Kind.GRUNT)
+	_check("aliens drop in and land", grunt != null)
+	if grunt:
+		await _aim_at(grunt.center())
+		level.shoot()
+		_check("killing an alien scores and raises the multiplier",
+			level.kills == 1 and level.score == 100 and level.multiplier == 2,
+			"kills=%d score=%d mult=%d" % [level.kills, level.score, level.multiplier])
 
 	level._cooldown = 0.0
-	hero.camera.pitch = deg_to_rad(60.0)  # Straight up at the sky.
+	level.hero.camera.pitch = deg_to_rad(60.0)  # Straight up at the sky.
 	await _frames(3)
-	level._shoot(level._aim_ray())
-	_check("a stray shot breaks the combo", level.multiplier == 1 and level.shots == 2,
-		"mult=%d shots=%d" % [level.multiplier, level.shots])
+	level.shoot()
+	_check("a stray shot breaks the combo", level.multiplier == 1)
 
-	var friendly: TargetPlate = null
+	var brute: AlienTarget = null
 	for child in level.get_children():
-		if child is TargetPlate and not child.is_hostile() and child.phase == TargetPlate.Phase.HIDDEN:
-			friendly = child
+		if child is AlienTarget and child.kind == AlienTarget.Kind.BRUTE and child.phase == ShooterTarget.Phase.HIDDEN:
+			brute = child
 			break
-	_check("level contains friendly heart plates", friendly != null)
-	if friendly:
-		hero.global_position.z = friendly.global_position.z + 14.0
-		hero.reset_physics_interpolation()
-		friendly.activate()
-		await _frames(20)
-		await _aim_at(friendly.center())
-		var score_before := level.score
-		level._shoot(level._aim_ray())
-		_check("shooting a heart is penalised", level.friendly_hits == 1 and level.score <= score_before,
-			"friendly_hits=%d" % level.friendly_hits)
+	_check("level contains brutes", brute != null)
+	if brute:
+		level.vehicle.global_position.z = brute.global_position.z + 20.0
+		brute.activate()
+		for i in 120:
+			await get_tree().physics_frame
+			if brute._time > 0.1:
+				break
+		await _aim_at(brute.center())
+		var kills_before := level.kills
+		var results: Array = []
+		for shot in 3:
+			level._cooldown = 0.0
+			var aim := level._aim_ray()
+			results.append(aim.collider == brute)
+			level.shoot()
+			await _frames(2)
+		_check("brutes survive two hits and die on the third",
+			results == [true, true, true] and level.kills == kills_before + 1 and brute.phase == ShooterTarget.Phase.DOWN,
+			"aimed=%s kills+%d" % [results, level.kills - kills_before])
 
-	hero.global_position.z = -level.track_length + 1.0
-	hero.reset_physics_interpolation()
-	await _frames(40)
-	_check("reaching the end of the street finishes the level", level._finished and level.progress() >= 1.0)
+	level.vehicle.global_position.z = level._start_z - level.track_length - 1.0
+	for i in 900:
+		await get_tree().physics_frame
+		if level._finished:
+			break
+	_check("reaching the end of the avenue finishes the level", level._finished)
 
 	print("\n%s — %d failure(s)" % ["PASS" if failures == 0 else "FAIL", failures])
 	get_tree().quit(failures)
 
 
-func _wait_for_up_target(hostile: bool) -> TargetPlate:
-	for i in 900:
+func _wait_for_landed(kind: AlienTarget.Kind) -> AlienTarget:
+	for i in 1500:
 		await get_tree().physics_frame
 		for child in level.get_children():
-			if child is TargetPlate and child.phase == TargetPlate.Phase.UP and child.is_hostile() == hostile:
-				await _frames(20)  # Let it finish flipping up.
+			if child is AlienTarget and child.kind == kind and child.phase == ShooterTarget.Phase.UP and child._time > 0.1:
 				return child
 	return null
 

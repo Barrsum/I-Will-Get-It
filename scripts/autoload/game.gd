@@ -9,8 +9,8 @@ const GYM := "res://scenes/levels/test_gym/test_gym.tscn"
 const LEVELS: Array[Dictionary] = [
 	{"id": &"level_01", "number": 1, "title": "STOMP ROAD", "genre": "Classic side-scrolling platformer",
 		"boast": "\"I'd stomp a hundred monsters for her!\"", "scene": "res://scenes/levels/level_01/level_01.tscn"},
-	{"id": &"level_02", "number": 2, "title": "RAILGUN ALLEY", "genre": "On-rails target shooter",
-		"boast": "\"I'd blast through a whole city for her!\"", "scene": "res://scenes/levels/level_02/level_02.tscn"},
+	{"id": &"level_02", "number": 2, "title": "INVASION ALLEY", "genre": "On-rails turret shooter",
+		"boast": "\"I'd fight off an alien invasion for her!\"", "scene": "res://scenes/levels/level_02/level_02.tscn"},
 	{"id": &"level_03", "number": 3, "title": "???", "genre": "Coming soon", "boast": "", "scene": ""},
 ]
 

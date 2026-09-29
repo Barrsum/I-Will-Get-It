@@ -2,7 +2,7 @@ class_name Checkpoint
 extends Area3D
 ## Mid-level flag. Touch it and dying brings you back here instead of the start.
 
-var level: PlatformerLevel
+var level: Node  ## Any level with reach_checkpoint(checkpoint).
 var active := false
 
 var _flag: MeshInstance3D
